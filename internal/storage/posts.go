@@ -1,12 +1,9 @@
 package storage
 
-import (
-	"database/sql"
-	"fmt"
-)
+import "time"
 
-func createPostsTables(db *sql.DB) error {
-	_, err := db.Exec(`
+func (s *Storage) CreatePostsTables() error {
+	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS posts (
 			id BIGSERIAL PRIMARY KEY,
 			feed_id BIGINT NOT NULL REFERENCES feeds(id) ON DELETE CASCADE,
@@ -18,8 +15,53 @@ func createPostsTables(db *sql.DB) error {
 	`)
 
 	if err != nil {
-		return fmt.Errorf("(Error)", err.Error())
+		return err
 	}
 
 	return nil
+}
+
+func (s *Storage) AddPost(feedID int64, title string, url string, published_at time.Time) error {
+	_, err := s.db.Exec(`
+	INSERT INTO posts (feed_id, title, url, published_at)
+	VALUES ($1, $2, $3, $4)
+	ON CONFLICT (url) DO NOTHING
+	`, feedID, title, url, published_at)
+
+	return err
+}
+
+func (s *Storage) GetPosts(limit int) ([]Post, error) {
+	rows, err := s.db.Query(`
+	SELECT id, feed_id, title, url, published_at, created_at
+	FROM posts
+	ORDER BY published_at DESC
+	LIMIT $1
+	`, limit)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var posts []Post
+
+	for rows.Next() {
+		var p Post
+
+		err := rows.Scan(&p.ID, &p.FeedID, &p.Title, &p.URL, &p.PublishedAt, &p.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		posts = append(posts, p)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return posts, nil
 }

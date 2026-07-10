@@ -2,7 +2,6 @@ package storage
 
 import (
 	"database/sql"
-	"fmt"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -14,31 +13,33 @@ type Storage struct {
 func NewStorage(dsn string) (*Storage, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		return nil, fmt.Errorf("(Error)", err.Error())
+		return nil, err
 	}
 
 	err = db.Ping()
 	if err != nil {
-		return nil, fmt.Errorf("(Error)", err.Error())
+		return nil, err
 	}
 
-	err = createFeedsTables(db)
+	s := Storage{db: db}
+
+	err = s.CreateFeedsTables()
 	if err != nil {
-		return nil, fmt.Errorf("(Error)", err.Error())
+		return nil, err
 	}
 
-	err = createPostsTables(db)
+	err = s.CreatePostsTables()
 	if err != nil {
-		return nil, fmt.Errorf("(Error)", err.Error())
+		return nil, err
 	}
 
-	return &Storage{db: db}, nil
+	return &s, nil
 }
 
 func (s *Storage) Close() error {
 	err := s.db.Close()
 	if err != nil {
-		return fmt.Errorf("(Error)", err.Error())
+		return err
 	}
 	return nil
 }
