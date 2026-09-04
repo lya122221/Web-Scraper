@@ -1,6 +1,6 @@
 package storage
 
-func (s *Storage) CreateFeedsTables() error {
+func (s *Storage) CreateFeedsTable() error {
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS feeds (
 			id BIGSERIAL PRIMARY KEY,

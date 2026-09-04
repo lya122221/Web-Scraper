@@ -23,12 +23,12 @@ func NewStorage(dsn string) (*Storage, error) {
 
 	s := Storage{db: db}
 
-	err = s.CreateFeedsTables()
+	err = s.CreateFeedsTable()
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.CreatePostsTables()
+	err = s.CreatePostsTable()
 	if err != nil {
 		return nil, err
 	}
@@ -37,9 +37,5 @@ func NewStorage(dsn string) (*Storage, error) {
 }
 
 func (s *Storage) Close() error {
-	err := s.db.Close()
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.db.Close()
 }

@@ -2,7 +2,7 @@ package storage
 
 import "time"
 
-func (s *Storage) CreatePostsTables() error {
+func (s *Storage) CreatePostsTable() error {
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS posts (
 			id BIGSERIAL PRIMARY KEY,
@@ -21,12 +21,12 @@ func (s *Storage) CreatePostsTables() error {
 	return nil
 }
 
-func (s *Storage) AddPost(feedID int64, title string, url string, published_at time.Time) error {
+func (s *Storage) AddPost(feedID int64, title string, url string, publishedAt *time.Time) error {
 	_, err := s.db.Exec(`
 	INSERT INTO posts (feed_id, title, url, published_at)
 	VALUES ($1, $2, $3, $4)
 	ON CONFLICT (url) DO NOTHING
-	`, feedID, title, url, published_at)
+	`, feedID, title, url, publishedAt)
 
 	return err
 }
@@ -35,7 +35,7 @@ func (s *Storage) GetPosts(limit int) ([]Post, error) {
 	rows, err := s.db.Query(`
 	SELECT id, feed_id, title, url, published_at, created_at
 	FROM posts
-	ORDER BY published_at DESC
+	ORDER BY published_at DESC NULLS LAST
 	LIMIT $1
 	`, limit)
 
