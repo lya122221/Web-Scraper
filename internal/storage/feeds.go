@@ -1,5 +1,14 @@
 package storage
 
+import (
+	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v5/pgconn"
+)
+
+var ErrFeedAlreadyExists = errors.New("feed already exists")
+
 func (s *Storage) CreateFeedsTable() error {
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS feeds (
@@ -17,20 +26,26 @@ func (s *Storage) CreateFeedsTable() error {
 	return nil
 }
 
-func (s *Storage) AddFeed(name string, url string) (int64, error) {
+func (s *Storage) AddFeed(ctx context.Context, name string, url string) (int64, error) {
 	var id int64
 
-	err := s.db.QueryRow(`
-		INSERT INTO feeds (name, url)
-		VALUES ($1, $2)
-		RETURNING id
-	`, name, url).Scan(&id)
+	err := s.db.QueryRowContext(ctx, `
+			INSERT INTO feeds (name, url)
+			VALUES ($1, $2)
+			RETURNING id
+		`, name, url).Scan(&id)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return 0, ErrFeedAlreadyExists
+		}
+	}
 
 	return id, err
 }
 
-func (s *Storage) GetFeeds() ([]Feed, error) {
-	rows, err := s.db.Query(`
+func (s *Storage) GetFeeds(ctx context.Context) ([]Feed, error) {
+	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, name, url, created_at
 		FROM feeds
 	`)
@@ -41,7 +56,7 @@ func (s *Storage) GetFeeds() ([]Feed, error) {
 
 	defer rows.Close()
 
-	var feeds []Feed
+	feeds := make([]Feed, 0)
 
 	for rows.Next() {
 		var f Feed

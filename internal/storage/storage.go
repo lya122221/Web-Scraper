@@ -15,6 +15,12 @@ func NewStorage(dsn string) (*Storage, error) {
 	if err != nil {
 		return nil, err
 	}
+	closeOnError := true
+	defer func() {
+		if closeOnError {
+			db.Close()
+		}
+	}()
 
 	err = db.Ping()
 	if err != nil {
@@ -33,6 +39,7 @@ func NewStorage(dsn string) (*Storage, error) {
 		return nil, err
 	}
 
+	closeOnError = false
 	return &s, nil
 }
 

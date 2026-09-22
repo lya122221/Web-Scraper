@@ -1,6 +1,9 @@
 package storage
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 func (s *Storage) CreatePostsTable() error {
 	_, err := s.db.Exec(`
@@ -21,8 +24,8 @@ func (s *Storage) CreatePostsTable() error {
 	return nil
 }
 
-func (s *Storage) AddPost(feedID int64, title string, url string, publishedAt *time.Time) error {
-	_, err := s.db.Exec(`
+func (s *Storage) AddPost(ctx context.Context, feedID int64, title string, url string, publishedAt *time.Time) error {
+	_, err := s.db.ExecContext(ctx, `
 	INSERT INTO posts (feed_id, title, url, published_at)
 	VALUES ($1, $2, $3, $4)
 	ON CONFLICT (url) DO NOTHING
@@ -31,11 +34,11 @@ func (s *Storage) AddPost(feedID int64, title string, url string, publishedAt *t
 	return err
 }
 
-func (s *Storage) GetPosts(limit int) ([]Post, error) {
-	rows, err := s.db.Query(`
+func (s *Storage) GetPosts(ctx context.Context, limit int) ([]Post, error) {
+	rows, err := s.db.QueryContext(ctx, `
 	SELECT id, feed_id, title, url, published_at, created_at
 	FROM posts
-	ORDER BY published_at DESC NULLS LAST
+		ORDER BY created_at DESC
 	LIMIT $1
 	`, limit)
 
@@ -45,7 +48,7 @@ func (s *Storage) GetPosts(limit int) ([]Post, error) {
 
 	defer rows.Close()
 
-	var posts []Post
+	posts := make([]Post, 0)
 
 	for rows.Next() {
 		var p Post
